@@ -13,7 +13,9 @@ typedef struct _nbody_t {
   double vx;
   double vy;
   double vz;
-  unsigned long int ident;
+  double ax;
+  double ay;
+  double az;
 } nbody_t;
 
 typedef struct _nbody_holder_t {

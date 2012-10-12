@@ -62,6 +62,9 @@ vector<nbody_holder_t> getPoints()
     s_stream >> scientific >> body->vx;
     s_stream >> scientific >> body->vy;
     s_stream >> scientific >> body->vz;
+    body->ax = 0;
+    body->ay = 0;
+    body->az = 0;
     current.x = body->x;
     current.body = body;
     holder.push_back(current);
