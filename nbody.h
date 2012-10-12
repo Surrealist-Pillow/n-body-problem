@@ -24,18 +24,16 @@ typedef struct _nbody_holder_t {
 } nbody_holder_t;
 
 
-
+nbody_t* readBody(string& line);
 vector<nbody_holder_t> getPoints();
 void freePoints(const vector<nbody_holder_t>& pointArray);
 /* 
  *  templatized methods that can take in either a vector of points 
  *  or a vector of point holders.
- */
+*/
 template <class T>
 void printPoints(const vector<T>& points);
-template <class T>
-void computeCollisions(const vector<T>& points);
-template <class T>
-void computeNewVelocities(const T& first, const T& second);
+void computeCollisions(const vector<nbody_t*>& points);
+void computeNewVelocities(const nbody_t& first, const nbody_t& second);
 
 #endif
