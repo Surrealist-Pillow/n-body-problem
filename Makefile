@@ -2,7 +2,7 @@ OBJECTS = nbody.o
 SOURCES = nbody.h nbody.cpp
 CFLAGS = -O3 -g -Wall
 CXX = g++
-LIBS = -lm -lrt
+LIBS = -lm
 
 all: nbody
 
