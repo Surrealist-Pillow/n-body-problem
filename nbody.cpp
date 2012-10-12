@@ -14,7 +14,12 @@ int main()
   return 0;
 }
 
-void printPoints(const vector<nbody_holder_t>& points)
+/*
+ * Print out the points for a given vector of either 
+ * holders or body objects.
+ */
+template <class T>
+void printPoints(const vector<T>& points)
 {
   for (int i = 0; i < points.size(); i++)
     cout << points[i].x << endl;
@@ -26,6 +31,11 @@ void freePoints(const vector<nbody_holder_t>& pointArray)
     delete pointArray[i].body;
 }
 
+/*
+ * Returns a vector of holder structs. This supports good
+ * cache performance by only storing the x value in the 
+ * holding structure and containing a pointer to the rest.
+ */
 vector<nbody_holder_t> getPoints()
 {
   string cur_line;
@@ -36,9 +46,9 @@ vector<nbody_holder_t> getPoints()
       s_stream >> NTIMESTEPS;
     else s_stream >> INPUT_SIZE;
   }
-  vector<nbody_holder_t> holder(INPUT_SIZE);
   for (int i = 2; i <= 5; i++)
     getline(cin, cur_line);
+  vector<nbody_holder_t> holder(INPUT_SIZE);
   while (getline(cin, cur_line))
   {
     istringstream s_stream(cur_line);
@@ -59,7 +69,8 @@ vector<nbody_holder_t> getPoints()
   return holder;
 }
 
-void computeCollisions(const vector<nbody_holder_t>& points)
+template <class T>
+void computeCollisions(const vector<T>& points)
 {
   for (int step = 0; step < NTIMESTEPS; step++) {
     for (int i = 0; i < INPUT_SIZE; i++) {
@@ -71,8 +82,9 @@ void computeCollisions(const vector<nbody_holder_t>& points)
   }
 }
 
+template <class T>
 // Something here to compute new velocities of the points
-void computeNewVelocities(const nbody_holder_t& first, const nbody_holder_t& second)
+void computeNewVelocities(const T& first, const T& second)
 {
 
 }
