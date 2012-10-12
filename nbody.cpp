@@ -6,7 +6,7 @@
 using namespace std;
 
 static int INPUT_SIZE, NTIMESTEPS, DTIME, DTHF, EPS;
-const int THRESHOLD = 0.5;
+const double THRESHOLD = 0.5;
 
 int main()
 {
@@ -76,24 +76,19 @@ vector<nbody_holder_t> getPoints()
 
 void computeInteractions(const vector<nbody_holder_t>& points)
 {
-  int numInteractions = 0;
-  
   for (int step = 0; step < NTIMESTEPS; step++) {
     for (int i = 0; i < INPUT_SIZE; i++) {
       points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
       for(int j = i+1; j < INPUT_SIZE; j++) {
-        //double dist = abs(points[i].x - points[j].x);
+        double dist = abs(points[i].x - points[j].x);
         //cout << dist << endl;
-        if (abs(points[i].x - points[j].x) < THRESHOLD) {
-          ++numInteractions;
+        if (dist < THRESHOLD) {
           computeForce(*points[i].body, *points[j].body);
         }
       }
       updatePosition(*points[i].body);
     }
   }
-  
-  cout << numInteractions << endl;
 }
 
 // computes the acceleration delta for this particular interaction
