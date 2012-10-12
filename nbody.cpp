@@ -49,7 +49,7 @@ vector<nbody_holder_t> getPoints()
   }
   DTHF = 0.5 * DTIME;
   getline(cin, cur_line); // ignore TOL
-  vector<nbody_holder_t> holder(INPUT_SIZE);
+  vector<nbody_holder_t> holder;
   while (getline(cin, cur_line))
   {
     istringstream s_stream(cur_line);
