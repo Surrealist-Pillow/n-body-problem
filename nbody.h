@@ -1,3 +1,4 @@
+#include <string>
 #include <vector>
 
 #ifndef NBODY_H
@@ -33,7 +34,8 @@ void freePoints(const vector<nbody_holder_t>& pointArray);
 */
 template <class T>
 void printPoints(const vector<T>& points);
-void computeCollisions(const vector<nbody_t*>& points);
-void computeNewVelocities(const nbody_t& first, const nbody_t& second);
+void computeInteractions(const vector<nbody_holder_t>& points);
+void computeForce(nbody_t& first, const nbody_t& second);
+void updatePosition(nbody_t& body);
 
 #endif
