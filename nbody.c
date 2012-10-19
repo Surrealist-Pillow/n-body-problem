@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <time.h>
 
 #define MIN(X,Y) (X < Y ? X : Y)
 #define MAX(X,Y) (X < Y ? Y : X)
@@ -13,8 +14,33 @@ const double THRESHOLD = 0.5;
 int main()
 {
   nbody_holder_t* points = getPoints();
+  time_t  t0, t1;
+  clock_t c0, c1;
+  // Compute interactions between the points and time it takes.
+  t0 = time(NULL);
+  c0 = clock(); 
   computeInteractions(points);
-  printPoints(points);
+  t1 = time(NULL);
+  c1 = clock();
+  printf("Elapsed clock time without sorting is %lf seconds\n", (double)t1-t0);
+  printf("Elapsed CPU time without sorting is %lf seconds\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
+  // Now to test blocking!
+  t0 = time(NULL);
+  c0 = clock(); 
+  computeBlockedInteractions(points);
+  t1 = time(NULL);
+  c1 = clock();
+  printf("Elapsed clock time with blocking is %lf seconds\n", (double)t1-t0);
+  printf("Elapsed CPU time with blocking is %lf seconds\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
+  // Now for the sorted algorithm (which should be faster).
+  t0 = time(NULL);
+  c0 = clock();
+  computeSortedInteractions(points);
+  t1 = time(NULL);
+  c1 = clock();
+  printf("Elapsed wall clock time with sorting is %lf seconds\n", (double)t1-t0);
+  printf("Elapsed CPU time with sorting is %lf\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
+  
   freePoints(points);
   free(points);
   return 0;
@@ -104,6 +130,28 @@ void computeInteractions(const nbody_holder_t* points)
         }
       }
       updatePosition(points[i].body);
+    }
+  }
+}
+
+void computeBlockedInteractions(const nbody_holder_t* points)
+{
+  int BLOCK_SIZE = 4096;    
+  for (int step = 0; step < NTIMESTEPS; step++) {
+    for (int l = 0; l < INPUT_SIZE; l += BLOCK_SIZE) {
+      for (int k = l; k < INPUT_SIZE; k += BLOCK_SIZE) {
+        int maxIndex = MIN(k + BLOCK_SIZE, INPUT_SIZE);
+        for (int i = 0; i < maxIndex; i++) {
+          points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
+          for(int j = i+1; j < maxIndex; j++) {
+            double dist = abs(points[i].x - points[j].x);
+            if (dist < THRESHOLD) {
+              computeForce(points[i].body, points[j].body);
+            }
+          }
+          updatePosition(points[i].body);
+        }
+      }
     }
   }
 }

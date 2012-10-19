@@ -25,6 +25,7 @@ void printPoints(const nbody_holder_t* points);
 int compareHolders(const void* holderA, const void* holderB);
 void computeInteractions(const nbody_holder_t* points);
 void computeSortedInteractions(nbody_holder_t* points);
+void computeBlockedInteractions(const nbody_holder_t* points);
 void computeForce(nbody_t* first, const nbody_t* second);
 void updatePosition(nbody_t* body);
 
