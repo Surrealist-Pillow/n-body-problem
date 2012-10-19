@@ -1,15 +1,22 @@
 #include "nbody.h"
-#include <stdio>
-#include <cmath>
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 
-static int INPUT_SIZE, NTIMESTEPS, DTIME, DTHF, EPS;
+#define MIN(X,Y) (X < Y ? X : Y)
+#define MAX(X,Y) (X < Y ? Y : X)
+
+static int INPUT_SIZE, NTIMESTEPS; 
+static double DTIME, DTHF, EPS;
 const double THRESHOLD = 0.5;
 
 int main()
 {
   nbody_holder_t* points = getPoints();
   computeInteractions(points);
+  printPoints(points);
   freePoints(points);
+  free(points);
   return 0;
 }
 
@@ -17,11 +24,14 @@ int main()
  * Print out the points for a given vector of either 
  * holders or body objects.
  */
-template <class T>
 void printPoints(const nbody_holder_t* points)
 {
-  for (int i = 0; i < INPUT_SIZE; i++)
-    printf("%g", points[i].x);
+  int i;
+  for (i = 0; i < INPUT_SIZE; i++)
+  {
+    printf("%lf %lf %lf\n", points[i].x, 
+        points[i].body->y, points[i].body->z);
+  }
 }
 
 void freePoints(const nbody_holder_t* pointArray)
@@ -38,10 +48,14 @@ void freePoints(const nbody_holder_t* pointArray)
 nbody_holder_t* getPoints()
 {
   char cur_line[1024];
-  int* outputs[] = { &INPUT_SIZE, &NTIMESTEPS, &DTIME, &EPS };
+  int* outputs[] = { &INPUT_SIZE, &NTIMESTEPS };
+  double* doubles[] = { &DTIME, &EPS };
   for (int i = 0; i < 4; i++) {
-    fgets(cin, cur_line);
-    sscanf(cur_line, "%d", outputs[i]);
+    fgets(cur_line, 1024, stdin);
+    if (i < 2)
+      sscanf(cur_line, "%d", outputs[i]);
+    else
+      sscanf(cur_line, "%lf", doubles[i-2]);
   }
   DTHF = 0.5 * DTIME;
   nbody_holder_t* holders = malloc(INPUT_SIZE * sizeof(nbody_holder_t));
@@ -49,12 +63,13 @@ nbody_holder_t* getPoints()
   int i = 0;
   while (fgets(cur_line, 1024, stdin))
   {
-    nbody_t* body = new nbody_t;
+    nbody_t* body = malloc(sizeof(nbody_t));
     body->ax = 0;
     body->ay = 0;
     body->az = 0;
-    sscanf("%G %G %G %G %G %G %G", &(body->mass), &(body->x), &(body->y),
-    &(body->z), &(body->vx), &(body->vy), &(body->vz));
+    sscanf(cur_line,"%lf %lf %lf %lf %lf %lf %lf",
+        &(body->mass),&(body->x),&(body->y),&(body->z),
+        &(body->vx),&(body->vy),&(body->vz));
     holders[i].x = body->x;
     holders[i].body = body;
     i++;
@@ -62,8 +77,23 @@ nbody_holder_t* getPoints()
   return holders;
 }
 
-void computeInteractions(const nbody_holder_t* points)
+int compareHolders(const void* holderA, const void* holderB)
 {
+  const nbody_holder_t* hold_A = holderA;
+  const nbody_holder_t* hold_B = holderB;
+  if (hold_A->x < hold_B->x) {
+    return -1;
+  }
+  else if (hold_A->x == hold_B->x) {
+    return 0;
+  }
+  else {
+    return 1;
+  }
+}
+
+void computeInteractions(const nbody_holder_t* points)
+{    
   for (int step = 0; step < NTIMESTEPS; step++) {
     for (int i = 0; i < INPUT_SIZE; i++) {
       points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
@@ -72,6 +102,28 @@ void computeInteractions(const nbody_holder_t* points)
         if (dist < THRESHOLD) {
           computeForce(points[i].body, points[j].body);
         }
+      }
+      updatePosition(points[i].body);
+    }
+  }
+}
+
+void computeSortedInteractions(nbody_holder_t* points) {
+  // Use qsort to sort the points by x value
+  for (int step = 0; step < NTIMESTEPS; step++) {
+    qsort(points, INPUT_SIZE, sizeof(nbody_holder_t), compareHolders);
+    for (int i = 0; i < INPUT_SIZE; i++) {
+      points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
+      int j = MAX(i-1, 0), k = MIN(i+1, INPUT_SIZE-1);
+      double dist1 = abs(points[i].x - points[j].x);
+      double dist2 = abs(points[i].x - points[k].x);
+      // Since it's sorted, we compute distance only with
+      // neighbors
+      if (dist1 != 0 && dist1 < THRESHOLD) {
+        computeForce(points[i].body, points[j].body);
+      }
+      if (dist2 != 0 && dist2 < THRESHOLD) {
+        computeForce(points[i].body, points[k].body);
       }
       updatePosition(points[i].body);
     }

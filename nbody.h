@@ -1,10 +1,5 @@
-#include <string>
-#include <vector>
-
 #ifndef NBODY_H
 #define NBODY_H
-
-using namespace std;
 
 typedef struct _nbody_t {
   double mass;
@@ -24,18 +19,13 @@ typedef struct _nbody_holder_t {
   nbody_t* body;
 } nbody_holder_t;
 
-
-nbody_t* readBody(string& line);
-vector<nbody_holder_t> getPoints();
-void freePoints(const vector<nbody_holder_t>& pointArray);
-/* 
- *  templatized methods that can take in either a vector of points 
- *  or a vector of point holders.
-*/
-template <class T>
-void printPoints(const vector<T>& points);
-void computeInteractions(const vector<nbody_holder_t>& points);
-void computeForce(nbody_t& first, const nbody_t& second);
-void updatePosition(nbody_t& body);
+nbody_holder_t* getPoints();
+void freePoints(const nbody_holder_t* pointArray);
+void printPoints(const nbody_holder_t* points);
+int compareHolders(const void* holderA, const void* holderB);
+void computeInteractions(const nbody_holder_t* points);
+void computeSortedInteractions(nbody_holder_t* points);
+void computeForce(nbody_t* first, const nbody_t* second);
+void updatePosition(nbody_t* body);
 
 #endif

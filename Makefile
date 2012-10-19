@@ -1,7 +1,7 @@
 OBJECTS = nbody.o
-SOURCES = nbody.h nbody.cpp
-CFLAGS = -g -Wall
-CXX = g++
+SOURCES = nbody.h nbody.c
+CFLAGS = -std=c99 -g -Wall
+CXX = gcc
 LIBS = -lm
 
 all: nbody
@@ -9,8 +9,8 @@ all: nbody
 nbody: $(OBJECTS)
 	$(CXX) $(CFLAGS) $(OBJECTS) $(LIBS) -o nbody
 
-nbody.o: nbody.cpp
-	$(CXX) $(CFLAGS) -c nbody.cpp
+nbody.o: nbody.c
+	$(CXX) $(CFLAGS) -c nbody.c
 clean:
 	rm nbody *o
 
