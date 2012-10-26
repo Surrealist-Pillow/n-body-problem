@@ -1,16 +1,19 @@
-OBJECTS = nbody.o
-SOURCES = nbody.h nbody.c
-CFLAGS = -std=c99 -g -Wall
-CXX = gcc
+OBJECTS = main.o nbody.o
+CFLAGS = -std=c99 -pg -Wall -g
+IFLAGS = -opt-report-phase all -opt-report-file nbody.rpt -opt-report 3
+CXX = icc
 LIBS = -lm
 
 all: nbody
 
 nbody: $(OBJECTS)
-	$(CXX) $(CFLAGS) $(OBJECTS) $(LIBS) -o nbody
+	$(CXX) $(CFLAGS) $(IFLAGS) $(OBJECTS) $(LIBS) -o nbody
 
 nbody.o: nbody.c
-	$(CXX) $(CFLAGS) -c nbody.c
+	$(CXX) $(CFLAGS) $(IFLAGS) -c nbody.c
+
+main.o: main.c
+	$(CXX) $(CFLAGS) $(IFLAGS) -c main.c
+
 clean:
 	rm nbody *o
-

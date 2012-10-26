@@ -3,67 +3,37 @@
 #include <math.h>
 #include <stdlib.h>
 #include <time.h>
-
-#define MIN(X,Y) (X < Y ? X : Y)
-#define MAX(X,Y) (X < Y ? Y : X)
-
-static int INPUT_SIZE, NTIMESTEPS; 
-static double DTIME, DTHF, EPS;
-const double THRESHOLD = 0.5;
-
-int main()
-{
-  nbody_holder_t* points = getPoints();
-  time_t  t0, t1;
-  clock_t c0, c1;
-  // Compute interactions between the points and time it takes.
-  t0 = time(NULL);
-  c0 = clock(); 
-  computeInteractions(points);
-  t1 = time(NULL);
-  c1 = clock();
-  printf("Elapsed clock time without sorting is %lf seconds\n", (double)t1-t0);
-  printf("Elapsed CPU time without sorting is %lf seconds\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
-  // Now to test blocking!
-  t0 = time(NULL);
-  c0 = clock(); 
-  computeBlockedInteractions(points);
-  t1 = time(NULL);
-  c1 = clock();
-  printf("Elapsed clock time with blocking is %lf seconds\n", (double)t1-t0);
-  printf("Elapsed CPU time with blocking is %lf seconds\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
-  // Now for the sorted algorithm (which should be faster).
-  t0 = time(NULL);
-  c0 = clock();
-  computeSortedInteractions(points);
-  t1 = time(NULL);
-  c1 = clock();
-  printf("Elapsed wall clock time with sorting is %lf seconds\n", (double)t1-t0);
-  printf("Elapsed CPU time with sorting is %lf\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
-  
-  freePoints(points);
-  free(points);
-  return 0;
-}
+#include <stdbool.h>
+#include "globals.h"
 
 /*
  * Print out the points for a given vector of either 
  * holders or body objects.
  */
-void printPoints(const nbody_holder_t* points)
+void printPoints(const nbody_type_t* points)
 {
   int i;
   for (i = 0; i < INPUT_SIZE; i++)
   {
-    printf("%lf %lf %lf\n", points[i].x, 
-        points[i].body->y, points[i].body->z);
+    if (points->type == 1) {
+      printf("%lf %lf %lf\n", points->holders[i].x, 
+        points->holders[i].body->y, points->holders[i].body->z);
+    }
+    else {
+     printf("%lf %lf %lf\n", points->bodies[i].x, 
+        points->bodies[i].y, points->bodies[i].z); 
+    }
   }
 }
 
-void freePoints(const nbody_holder_t* pointArray)
+void freePoints(const nbody_type_t* pointArray)
 {
-  for (int i = 0; i < INPUT_SIZE; i++)
-    free(pointArray[i].body);
+  if (pointArray->type == 1) {
+    for (int i = 0; i < INPUT_SIZE; i++)
+      free(pointArray->holders[i].body);
+    free(pointArray->holders);
+  }
+  else free(pointArray->bodies);
 }
 
 /*
@@ -71,7 +41,7 @@ void freePoints(const nbody_holder_t* pointArray)
  * cache performance by only storing the x value in the 
  * holding structure and containing a pointer to the rest.
  */
-nbody_holder_t* getPoints()
+nbody_type_t* getPoints(int type)
 {
   char cur_line[1024];
   int* outputs[] = { &INPUT_SIZE, &NTIMESTEPS };
@@ -84,98 +54,149 @@ nbody_holder_t* getPoints()
       sscanf(cur_line, "%lf", doubles[i-2]);
   }
   DTHF = 0.5 * DTIME;
-  nbody_holder_t* holders = malloc(INPUT_SIZE * sizeof(nbody_holder_t));
+  nbody_type_t* retVal = malloc(sizeof(nbody_type_t));
+  retVal->type = type;
+  if (type == 1)
+    retVal->holders = malloc(INPUT_SIZE * sizeof(nbody_holder_t));
+  else
+    retVal->bodies = malloc(INPUT_SIZE * sizeof(nbody_t));
   fgets(cur_line, 1024, stdin); // ignore TOL
   int i = 0;
   while (fgets(cur_line, 1024, stdin))
   {
-    nbody_t* body = malloc(sizeof(nbody_t));
-    body->ax = 0;
-    body->ay = 0;
-    body->az = 0;
+    nbody_t* bodyPtr, body;
+    if (type == 1)
+      bodyPtr = malloc(sizeof(nbody_t));
+    else bodyPtr = &body;
+    bodyPtr->ax = 0;
+    bodyPtr->ay = 0;
+    bodyPtr->az = 0;
     sscanf(cur_line,"%lf %lf %lf %lf %lf %lf %lf",
-        &(body->mass),&(body->x),&(body->y),&(body->z),
-        &(body->vx),&(body->vy),&(body->vz));
-    holders[i].x = body->x;
-    holders[i].body = body;
+        &(bodyPtr->mass),&(bodyPtr->x),&(bodyPtr->y),&(bodyPtr->z),
+        &(bodyPtr->vx),&(bodyPtr->vy),&(bodyPtr->vz));
+    if (type == 1) {
+      retVal->holders[i].x = bodyPtr->x;
+      retVal->holders[i].body = bodyPtr;
+    }
+    else {
+      retVal->bodies[i] = body;
+    }
     i++;
   }
-  return holders;
+  return retVal;
 }
 
 int compareHolders(const void* holderA, const void* holderB)
 {
   const nbody_holder_t* hold_A = holderA;
   const nbody_holder_t* hold_B = holderB;
-  if (hold_A->x < hold_B->x) {
-    return -1;
-  }
-  else if (hold_A->x == hold_B->x) {
-    return 0;
-  }
-  else {
-    return 1;
-  }
+  return hold_A->x - hold_B->x;
 }
 
-void computeInteractions(const nbody_holder_t* points)
+int compareBodies(const void* bodyA, const void* bodyB)
+{
+  const nbody_t* body_A = bodyA;
+  const nbody_t* body_B = bodyB;
+  return body_A->x - body_B->x;
+}
+
+void setAccelerations(const nbody_type_t* points, int index)
+{
+    // Need separate handling for holders and bodies
+    if (points->type == 1)
+      points->holders[index].body->ax = points->holders[index].body->ay = points->holders[index].body->az = 0;
+    else 
+      points->bodies[index].ax = points->bodies[index].ay = points->bodies[index].az = 0;
+}
+
+void computeInteractions(const nbody_type_t* points)
 {    
+  interact_param_t parameters;
+  parameters.max = INPUT_SIZE;
+  parameters.sorted = false;
   for (int step = 0; step < NTIMESTEPS; step++) {
     for (int i = 0; i < INPUT_SIZE; i++) {
-      points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
-      for(int j = i+1; j < INPUT_SIZE; j++) {
-        double dist = abs(points[i].x - points[j].x);
-        if (dist < THRESHOLD) {
-          computeForce(points[i].body, points[j].body);
-        }
-      }
-      updatePosition(points[i].body);
+      setAccelerations(points, i);
+      printf("%d\n", i);
+      parameters.index = i;
+      interact(points, &parameters);
     }
   }
 }
 
-void computeBlockedInteractions(const nbody_holder_t* points)
+void interact(const nbody_type_t* points, const interact_param_t* param)
 {
-  int BLOCK_SIZE = 4096;    
+  int index = param->index;
+  bool sorted = param->sorted;
+  // If we have a array of holders, process in one way.
+  if (points->type == 1) {
+    for (int j = index+1; j < param->max; j++) {
+      double dist = abs(points->holders[index].x - points->holders[j].x);
+      if (dist < THRESHOLD)
+        computeForce(points->holders[index].body, points->holders[j].body);
+      else {
+        if (sorted)
+          continue;
+      }
+    }
+    updatePosition(points->holders[index].body);
+  }
+  // Else it's an array of body objects, process differently.
+  else {
+    for (int j = index+1; j < param->max; j++) {
+      double dist = abs(points->bodies[index].x - points->bodies[j].x);
+      if (dist < THRESHOLD)
+        computeForce(&points->bodies[index], &points->bodies[j]);
+      else {
+        if (sorted)
+          continue;
+      }
+    }
+    updatePosition(&points->bodies[index]);
+  }
+}
+
+void computeBlockedInteractions(const nbody_type_t* points)
+{
+  interact_param_t parameters;
+  parameters.sorted = false;
+  int BLOCK_SIZE = 4096;
   for (int step = 0; step < NTIMESTEPS; step++) {
     for (int l = 0; l < INPUT_SIZE; l += BLOCK_SIZE) {
       for (int k = l; k < INPUT_SIZE; k += BLOCK_SIZE) {
         int maxIndex = MIN(k + BLOCK_SIZE, INPUT_SIZE);
+        parameters.max = maxIndex;
         for (int i = 0; i < maxIndex; i++) {
-          points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
-          for(int j = i+1; j < maxIndex; j++) {
-            double dist = abs(points[i].x - points[j].x);
-            if (dist < THRESHOLD) {
-              computeForce(points[i].body, points[j].body);
-            }
-          }
-          updatePosition(points[i].body);
+          setAccelerations(points, i);
+          parameters.index = i;
+          interact(points, &parameters);
         }
       }
+    }
+  } 
+}
+
+void computeSortedInteractions(nbody_type_t* points) {
+  interact_param_t parameters;
+  parameters.max = INPUT_SIZE;
+  parameters.sorted = true;
+  // Use qsort to sort the points by x value
+  for (int step = 0; step < NTIMESTEPS; step++) {
+    sortPoints(points);
+    for (int i = 0; i < INPUT_SIZE; i++) {
+      setAccelerations(points, i);
+      parameters.index = i;
+      interact(points, &parameters);
     }
   }
 }
 
-void computeSortedInteractions(nbody_holder_t* points) {
-  // Use qsort to sort the points by x value
-  for (int step = 0; step < NTIMESTEPS; step++) {
-    qsort(points, INPUT_SIZE, sizeof(nbody_holder_t), compareHolders);
-    for (int i = 0; i < INPUT_SIZE; i++) {
-      points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
-      int j = MAX(i-1, 0), k = MIN(i+1, INPUT_SIZE-1);
-      double dist1 = abs(points[i].x - points[j].x);
-      double dist2 = abs(points[i].x - points[k].x);
-      // Since it's sorted, we compute distance only with
-      // neighbors
-      if (dist1 != 0 && dist1 < THRESHOLD) {
-        computeForce(points[i].body, points[j].body);
-      }
-      if (dist2 != 0 && dist2 < THRESHOLD) {
-        computeForce(points[i].body, points[k].body);
-      }
-      updatePosition(points[i].body);
-    }
-  }
+void sortPoints(nbody_type_t* points)
+{
+  if (points->type == 1)
+    qsort(points->holders, INPUT_SIZE, sizeof(nbody_holder_t), compareHolders);
+  else 
+    qsort(points->bodies, INPUT_SIZE, sizeof(nbody_t), compareBodies);
 }
 
 // computes the acceleration delta for this particular interaction
