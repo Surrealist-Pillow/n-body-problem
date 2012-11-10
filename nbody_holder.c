@@ -20,7 +20,8 @@ void printHolders(const nbody_holder_t* points)
 
 void freePoints(nbody_holder_t* points) {
   int i;
-  for (i = 0; i < INPUT_SIZE; i++) {
+  for (i = 0; i < INPUT_SIZE; i++) 
+  {
     free(points[i].body);
     points[i].body = NULL;
   }
@@ -35,7 +36,8 @@ nbody_holder_t* getHolders()
   char cur_line[1024];
   int* outputs[] = { &INPUT_SIZE, &NTIMESTEPS };
   double* doubles[] = { &DTIME, &EPS };
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 4; i++) 
+  {
     fgets(cur_line, 1024, stdin);
     if (i < 2)
       sscanf(cur_line, "%d", outputs[i]);
@@ -78,16 +80,19 @@ int compareHolders(const void* holderA, const void* holderB)
  */
 void computeHolderInteractions(nbody_holder_t* points)
 {
-  for (int step = 0; step < NTIMESTEPS; step++) {
-    for (int i = 0; i < INPUT_SIZE; i++) {
+  for (int step = 0; step < NTIMESTEPS; step++) 
+  {
+    for (int i = 0; i < INPUT_SIZE; i++) 
+    {
       points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
-      for (int j = i+1; j < INPUT_SIZE; j++) {
+      for (int j = i+1; j < INPUT_SIZE; j++) 
+      {
         double dist = abs(points[i].x - points[j].x);
-        if (dist < THRESHOLD) {
+        if (dist < THRESHOLD)
           computeForce(points[i].body, points[j].body);
-        }
       }
       updatePosition(points[i].body);
+      points[i].x = points[i].body->x;
     }
   }
 }
@@ -98,20 +103,25 @@ void computeHolderInteractions(nbody_holder_t* points)
  */
 void computeHolderBlockedInteractions(nbody_holder_t* points)
 {
-  int BLOCK_SIZE = 4096;
-  for (int step = 0; step < NTIMESTEPS; step++) {
-    for (int l = 0; l < INPUT_SIZE; l += BLOCK_SIZE) {
-      for (int k = l; k < INPUT_SIZE; k += BLOCK_SIZE) {
+  int BLOCK_SIZE = 10000;
+  for (int step = 0; step < NTIMESTEPS; step++) 
+  {
+    for (int l = 0; l < INPUT_SIZE; l += BLOCK_SIZE) 
+    {
+      for (int k = l; k < INPUT_SIZE; k += BLOCK_SIZE) 
+      {
         int maxIndex = MIN(k + BLOCK_SIZE, INPUT_SIZE);
-        for (int i = k; i < maxIndex; i++) {
+        for (int i = k; i < maxIndex; i++) 
+        {
           points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
-          for (int j = i; j < maxIndex; j++) {
+          for (int j = i+1; j < maxIndex; j++) 
+          {
             double dist = abs(points[i].x - points[j].x);
-            if (dist < THRESHOLD) {
+            if (dist < THRESHOLD)
               computeForce(points[i].body, points[j].body);
-            }
           }
           updatePosition(points[i].body);
+          points[i].x = points[i].body->x;
         }
       }
     }
@@ -119,20 +129,24 @@ void computeHolderBlockedInteractions(nbody_holder_t* points)
 }
 
 void computeHolderSortedInteractions(nbody_holder_t* points) {
-  for (int step = 0; step < NTIMESTEPS; step++) {
+  for (int step = 0; step < NTIMESTEPS; step++) 
+  {
     // Use qsort to sort the points by x value
     qsort(points, INPUT_SIZE, sizeof(nbody_holder_t), compareHolders);
-    for (int i = 0; i < INPUT_SIZE; i++) {
-      for (int j = i+1; j < INPUT_SIZE; j++) {
+    for (int i = 0; i < INPUT_SIZE; i++) 
+    {
+      points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
+      for (int j = i+1; j < INPUT_SIZE; j++) 
+      {
         double dist = abs(points[i].x - points[j].x);
         // Once the distance has reached the threshold we know
         // we don't need to compute any further.
-        if (dist < THRESHOLD) {
+        if (dist < THRESHOLD)
           computeForce(points[i].body, points[j].body);
-        }
         else break;
       }
       updatePosition(points[i].body);
+      points[i].x = points[i].body->x;
     }
   }
 }
