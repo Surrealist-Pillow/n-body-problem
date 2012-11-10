@@ -2,36 +2,52 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+static clock_t c0, c1;
+
+static void noImprovements(nbody_holder_t* holders)
+{
+  c0 = clock(); 
+  computeHolderInteractions(holders);
+  c1 = clock();
+  printf("Elapsed CPU time without improvements is %lf seconds\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
+}
+
+static void withBlocking(nbody_holder_t* holders)
+{
+  c0 = clock(); 
+  computeHolderBlockedInteractions(holders);
+  c1 = clock();
+  printf("Elapsed CPU time with blocking is %lf seconds\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
+}
+
+static void withSorting(nbody_holder_t* holders)
+{
+  c0 = clock();
+  computeHolderSortedInteractions(holders);
+  c1 = clock();
+  printf("Elapsed CPU time with sorting is %lf seconds\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
+}
 
 int main(int argc, char* argv[]) 
 {
+  if (argc < 2) {
+    printf("Usage: ./holder <option>\n");
+    printf("Potential options are 'sort', 'block', or 'none'\n");
+    exit(1);
+  }
   nbody_holder_t* holders = getHolders();
-  time_t  t0, t1;
-  clock_t c0, c1;
-  // Compute interactions between the points and time it takes.
-  t0 = time(NULL);
-  c0 = clock(); 
-  computeHolderInteractions(holders);
-  t1 = time(NULL);
-  c1 = clock();
-  printf("Elapsed clock time without improvements is %lf seconds\n", (double)t1-t0);
-  printf("Elapsed CPU time without improvements is %lf seconds\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
-  // Now to test blocking!
-  t0 = time(NULL);
-  c0 = clock(); 
-  computeHolderBlockedInteractions(holders);
-  t1 = time(NULL);
-  c1 = clock();
-  printf("Elapsed clock time with blocking is %lf seconds\n", (double)t1-t0);
-  printf("Elapsed CPU time with blocking is %lf seconds\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
-  // Now for the sorted algorithm (which should be faster).
-  t0 = time(NULL);
-  c0 = clock();
-  computeHolderSortedInteractions(holders);
-  t1 = time(NULL);
-  c1 = clock();
-  printf("Elapsed wall clock time with sorting is %lf seconds\n", (double)t1-t0);
-  printf("Elapsed CPU time with sorting is %lf\n", (((double)c1)-c0)/CLOCKS_PER_SEC);
+  if (!strcmp(argv[1], "sort"))
+    withSorting(holders);
+  else if (!strcmp(argv[1], "block"))
+    withBlocking(holders);
+  else if (!strcmp(argv[1], "none"))
+    noImprovements(holders);
+  else {
+    printf("Invalid option\n");
+    exit(1);
+  }
   freePoints(holders);
   free(holders);
   return 0;

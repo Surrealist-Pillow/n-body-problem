@@ -13,7 +13,7 @@ void printHolders(const nbody_holder_t* points)
   int i;
   for (i = 0; i < INPUT_SIZE; i++)
   {
-     printf("%lf %lf %lf\n", points[i].body->x,
+     printf("%lf %lf %lf\n", points[i].x,
         points[i].body->y, points[i].body->z);
   }
 }
@@ -119,12 +119,14 @@ void computeHolderBlockedInteractions(nbody_holder_t* points)
 }
 
 void computeHolderSortedInteractions(nbody_holder_t* points) {
-  // Use qsort to sort the points by x value
   for (int step = 0; step < NTIMESTEPS; step++) {
+    // Use qsort to sort the points by x value
     qsort(points, INPUT_SIZE, sizeof(nbody_holder_t), compareHolders);
     for (int i = 0; i < INPUT_SIZE; i++) {
       for (int j = i+1; j < INPUT_SIZE; j++) {
         double dist = abs(points[i].x - points[j].x);
+        // Once the distance has reached the threshold we know
+        // we don't need to compute any further.
         if (dist < THRESHOLD) {
           computeForce(points[i].body, points[j].body);
         }
