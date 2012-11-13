@@ -7,8 +7,6 @@
 
 static clock_t c0, c1;
 
-
-
 static void noImprovements(nbody_holder_t* holders)
 {
   c0 = clock(); 

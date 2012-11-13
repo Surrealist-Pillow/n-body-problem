@@ -58,7 +58,7 @@ nbody_holder_t* getHolders()
         &(retVal[i].body->mass), &(retVal[i].x), &(retVal[i].body->y),
         &(retVal[i].body->z), &(retVal[i].body->vx), &(retVal[i].body->vy),
         &(retVal[i].body->vz));
-    retVal[i].body->x = retVal[i]->x;
+    retVal[i].body->x = retVal[i].x;
     i++;
   }
   return retVal;
@@ -104,26 +104,47 @@ void computeHolderInteractions(nbody_holder_t* points)
  */
 void computeHolderBlockedInteractions(nbody_holder_t* points)
 {
-  int BLOCK_SIZE = 10000;
+  int BLOCK_SIZE = 4096;
   for (int step = 0; step < NTIMESTEPS; step++) 
   {
-    for (int l = 0; l < INPUT_SIZE; l += BLOCK_SIZE) 
+    for (int l = 0; l < INPUT_SIZE; l += BLOCK_SIZE)
     {
+      for (int i=l; i<MIN(l+BLOCK_SIZE, INPUT_SIZE); i++)
+        points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
       for (int k = l; k < INPUT_SIZE; k += BLOCK_SIZE) 
       {
-        int maxIndex = MIN(k + BLOCK_SIZE, INPUT_SIZE);
-        for (int i = k; i < maxIndex; i++) 
+        int maxIndexi = MIN(k + BLOCK_SIZE, INPUT_SIZE);
+        if (k == l)
         {
-          points[i].body->ax = points[i].body->ay = points[i].body->az = 0;
-          for (int j = i+1; j < maxIndex; j++) 
+          for (int i = l; i < maxIndexi; i++) 
           {
-            double dist = abs(points[i].x - points[j].x);
-            if (dist < THRESHOLD)
-              computeForce(points[i].body, points[j].body);
+            int maxIndexj = MIN(k + BLOCK_SIZE, INPUT_SIZE);
+            for (int j = i+1; j < maxIndexj; j++) 
+            {
+              double dist = abs(points[i].x - points[j].x);
+              if (dist < THRESHOLD)
+                computeForce(points[i].body, points[j].body);
+            }
           }
+        }
+        else
+        {
+          for (int i = l; i < maxIndexi; i++) 
+          { 
+            int maxIndexj = MIN(k + BLOCK_SIZE, INPUT_SIZE);
+            for (int j = k; j < maxIndexj; j++) 
+            {
+              double dist = abs(points[i].x - points[j].x);
+              if (dist < THRESHOLD) 
+                computeForce(points[i].body, points[j].body);
+            }
+          }
+        }
+      }
+      for (int i=l; i<MIN(l+BLOCK_SIZE, INPUT_SIZE); i++)
+      {
           updatePosition(points[i].body);
           points[i].x = points[i].body->x;
-        }
       }
     }
   }
