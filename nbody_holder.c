@@ -58,6 +58,7 @@ nbody_holder_t* getHolders()
         &(retVal[i].body->mass), &(retVal[i].x), &(retVal[i].body->y),
         &(retVal[i].body->z), &(retVal[i].body->vx), &(retVal[i].body->vy),
         &(retVal[i].body->vz));
+    retVal[i].body->x = retVal[i]->x;
     i++;
   }
   return retVal;
